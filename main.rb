@@ -1,4 +1,4 @@
 require_relative 'lib/board.rb'
 
 chess = Board.new
-chess.play
+chess.start
