@@ -17,9 +17,9 @@ class Board
     @current_player = 0
   end
 
-  def play
+  def start
     greetings
-    game_mode == "1" ? multi_player : multi_player
+    game_mode == "1" ? single_player : multi_player
   end
 
   def game_mode
@@ -48,7 +48,35 @@ class Board
   end
 
   def single_player
-    
+    create_board
+    selection = team_selection 
+    until game_over?
+      begin
+        print_board
+        play = @current_player == selection ? do_a_play? : machine_plays
+      end until play
+      switch_player
+      print_board
+    end
+    final_message
+  end
+
+  def team_selection
+    puts "Select your team:\n >Insert 1 for #{white_token}.\n  >Insert 2 for #{black_token}."
+    loop do
+      print "> "
+      selection = gets.chomp
+      return (selection.to_i-1) if selection.match?(/\A[12]\z/)
+      puts "Invalid input! Please insert 1 or 2:"
+    end
+  end
+
+  def machine_plays
+    color = @players[@current_player]
+    piece = get_team(color).reject {|piece| all_legal_moves(piece, color).empty?}.sample
+    random_move = all_legal_moves(piece, color).sample
+    target_pos = sum_coords(piece.pos, random_move)
+    put_piece(piece, target_pos)
   end
 
   def multi_player
@@ -65,7 +93,12 @@ class Board
   end
 
   def checkmate?(color)
-    check?(color) && !has_legal_moves?(color)
+    if check?(color) && !has_legal_moves?(color)
+      puts "CHECK-MATE!!! CONGRATULATIONS PLAYER #{@players[@current_player]}, YOU WON!!!"
+      true
+    else 
+      false
+    end
   end
 
   def undo_move(piece, piece_last_pos, target, target_pos)
@@ -142,7 +175,12 @@ class Board
   end
 
   def stalemate?(color)
-    !check?(color) && !has_legal_moves?(color)
+    if !check?(color) && !has_legal_moves?(color)
+      puts "STALEMATE! IT'S A DRAW ;("
+      true
+    else 
+      false
+    end
   end
 
   def has_legal_moves?(color)
