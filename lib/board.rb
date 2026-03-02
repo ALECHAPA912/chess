@@ -14,7 +14,7 @@ class Board
   def initialize
     @board = nil
     @players = [white_token, black_token]
-    @current_player = 0
+    @current_player = 1
   end
 
   def start
@@ -51,14 +51,17 @@ class Board
     create_board
     selection = team_selection 
     until game_over?
+      switch_player
       begin
+        clear_screen
         print_board
         play = @current_player == selection ? do_a_play? : machine_plays
       end until play
-      switch_player
-      print_board
     end
-    final_message
+  end
+
+  def clear_screen
+    Gem.win_platform? ? system("cls") : system("clear") 
   end
 
   def team_selection
@@ -82,14 +85,14 @@ class Board
   def multi_player
     create_board
     until game_over?
+      switch_player
       begin
+        clear_screen
         print_board
         play = do_a_play?
+        clear_screen
       end until play
-      switch_player
-      print_board
     end
-    final_message
   end
 
   def checkmate?(color)
@@ -256,7 +259,6 @@ class Board
   def move_piece(piece)
     puts "Select the position you want to move your #{piece}! (Input coords: First letter, then number; e.g: 'A1')\nTo change your selected piece insert 'change'."
     new_pos = nil
-    puts "POSSIBLE LEGAL MOVES: #{all_legal_moves(piece, @players[@current_player])}"
     until new_pos do
       input = gets.chomp
       return input if input == 'change'
@@ -349,7 +351,7 @@ class Board
 
   def create_board
     @board = Array.new(8) { Array.new(8, nil) }
-    @current_player = 0
+    @current_player = 1
     [0, 7].each do |row|
       token = (row == 0 ? white_token : black_token)
       @board[4][row] = King.new(token, [4, row])
