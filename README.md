@@ -17,3 +17,10 @@ Le meti mucho esfuerzo espero que les guste!
 
 26/02/26
 
+notas de version 1.2: serializacion
+le agregamos una variable de estado al modo de juego de board para que a la hora de cerrar o abrir el juego
+podemos saber si es necesario la serializacion o deserealizacion.
+agregamos variables globales de exit y sp_player.
+agregamos el modulo serializer
+modificamos do a play para que retorne exit y podamos parar y guardar la partida
+

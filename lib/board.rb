@@ -6,30 +6,67 @@ require_relative 'bishop.rb'
 require_relative 'knight.rb'
 require_relative 'pawn.rb'
 require_relative 'node.rb'
+require_relative 'serializable.rb'
 require 'set'
 
 class Board
   include Miscellaneous
+  include Serializable
 
   def initialize
     @board = nil
+    @current_player = 0
+    @gamemode = nil
+    @sp_team = nil
     @players = [white_token, black_token]
-    @current_player = 1
+    @board_status = :in_menu
+  end
+
+  def on_game?
+    @board_status == :playing
+  end
+
+  def on_menu?
+    @board_status == :on_menu
   end
 
   def start
-    greetings
-    game_mode == "1" ? single_player : multi_player
+    loop do
+      if @board
+        @gamemode == 0 ? single_player : multi_player
+      else
+        clear_screen
+        greetings
+        case game_mode
+          when "1"
+          break if single_player == "exit"
+          when "2"
+          break if multi_player == "exit"
+          when "exit"
+          break
+        end
+      end
+      break if exit?
+      reset_board
+    end
   end
 
   def game_mode
-    puts "Choose your game mode:\nInsert 1 for Single-Player (vs Machine).\nInsert 2 for Multi-Player."
-    loop do
-      print "> "
+    two_options_question("Choose your game mode:\n- Insert '1' for Singleplayer (vs Machine)\n- Insert '2' for Multiplayer (PvP)\n- Insert 'exit' for exit")
+  end
+
+  def exit?
+    two_options_question("--------------------------------------\n-Insert '1' to start a new game\n-Insert '2' to save and exit") == "1" ? false : true
+  end
+
+  def two_options_question(question)
+    puts question
+    selection = gets.chomp
+    until selection.match?(/\A[12]\z/) || selection == "exit" 
+      puts "Invalid input! Please insert '1', '2' or 'exit':"
       selection = gets.chomp
-      return selection if selection.match?(/\A[12]\z/)
-      puts "Invalid input! Please insert 1 or 2:"
     end
+    selection
   end
 
   def print_board
@@ -48,15 +85,18 @@ class Board
   end
 
   def single_player
-    create_board
-    selection = team_selection 
+    @gamemode = 0 
+    create_board if @board.nil?
+    @sp_team = team_selection if @sp_team.nil?
+    @board_status = :playing
     until game_over?
-      switch_player
       begin
         clear_screen
         print_board
-        play = @current_player == selection ? do_a_play? : machine_plays
+        play = @current_player == @sp_team ? do_a_play : machine_plays
+        return if play == "exit"
       end until play
+      switch_player
     end
   end
 
@@ -65,13 +105,8 @@ class Board
   end
 
   def team_selection
-    puts "Select your team:\n >Insert 1 for #{white_token}.\n  >Insert 2 for #{black_token}."
-    loop do
-      print "> "
-      selection = gets.chomp
-      return (selection.to_i-1) if selection.match?(/\A[12]\z/)
-      puts "Invalid input! Please insert 1 or 2:"
-    end
+    selection = two_options_question("Select your team:\n >Insert 1 for White #{white_token}.\n  >Insert 2 for Black #{black_token}.")
+    selection == 'exit' ? selection : (selection.to_i) - 1
   end
 
   def machine_plays
@@ -83,20 +118,24 @@ class Board
   end
 
   def multi_player
-    create_board
+    @gamemode = 1 
+    create_board if @board.nil?
+    @board_status = :playing
     until game_over?
-      switch_player
       begin
         clear_screen
         print_board
-        play = do_a_play?
+        play = do_a_play
+        return if play == "exit"
         clear_screen
       end until play
+      switch_player
     end
   end
 
   def checkmate?(color)
     if check?(color) && !has_legal_moves?(color)
+      switch_player
       puts "CHECK-MATE!!! CONGRATULATIONS PLAYER #{@players[@current_player]}, YOU WON!!!"
       true
     else 
@@ -196,7 +235,7 @@ class Board
   end
 
   def get_enemies(color)
-    get_all_pieces.select { |piece| piece.color != color }
+    get_all_pieces.select { |piece| piece.color != color } 
   end
 
   def get_team(color)
@@ -207,26 +246,30 @@ class Board
     get_team(color).each { |piece| return piece if piece.is_a?(King) }
   end
 
-  def do_a_play?
+  def do_a_play
     puts "It's your turn Player #{@players[@current_player]}!"
     selection = select_piece
     until selection do
+      return selection if selection == "exit"
       selection = select_piece
     end
+    return selection if selection == "exit"
     plays = move_piece(selection)
     until plays
+      return plays if plays == "exit"
       plays = move_piece(selection)
     end
-    return false if plays == 'change'
-    true
+    return nil if plays == "change"
+    plays
   end
 
   def select_piece
-    puts "Select the piece you want to move! (Input coords: First letter, then number; e.g: 'A1')"
+    puts "Select the piece you want to move! (Input coords: First letter, then number; e.g: 'A1').\nInsert 'exit' to exit and save your game."
     coords = verify_input(gets.chomp)
     until coords do
       coords = verify_input(gets.chomp)
     end
+    return coords if coords == "exit"
     selection = @board[coords[0]][coords[1]]
     validate_piece_selection(selection)
   end
@@ -246,6 +289,7 @@ class Board
   end
 
   def verify_input(input)
+    return input if input == "exit"
     clean_input = input.gsub(/\s+/, "").upcase
     if clean_input.match?(/\A[A-H][0-7]\z/)
       clean_input.split('')
@@ -261,7 +305,7 @@ class Board
     new_pos = nil
     until new_pos do
       input = gets.chomp
-      return input if input == 'change'
+      return input if input == "change" || input == "exit"
       new_pos = verify_input(input)
     end
     clean_move = subtract_coords(new_pos, piece.pos)
@@ -351,7 +395,8 @@ class Board
 
   def create_board
     @board = Array.new(8) { Array.new(8, nil) }
-    @current_player = 1
+    @current_player = 0
+    @board_status = :playing
     [0, 7].each do |row|
       token = (row == 0 ? white_token : black_token)
       @board[4][row] = King.new(token, [4, row])
@@ -366,5 +411,13 @@ class Board
         @board[col][row] = Pawn.new(token, [col, row])
       end
     end
+  end
+
+  def reset_board
+    @board = nil
+    @current_player = 0
+    @gamemode = nil
+    @sp_team = nil
+    @board_status = :in_menu
   end
 end
