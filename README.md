@@ -1,6 +1,14 @@
-# chess
-PROYECTO FINAL THE ODIN PROJECT
-AUTOR: ALEJANDRO CHAPARRO
+# Chess Game
+
+This is my Final Project of Ruby's Course (The Odin Project).
+It's about a console chess game. There are two gamemodes:
+Multiplayer PvP and Single-player againist a basic IA that do
+random but legal moves.
+I used serialization to have de chance to save the current game.
+
+Hope you like it! Alejandro 26/02/26
+
+----------------------------------------------------
 
 Este es mi proyecto final del subcurso de Ruby en The Odin Project. 
 Este se trata de un juego de ajedrez de consola, el cual se podra ejecutar en modo un jugador 
